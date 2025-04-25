@@ -11,8 +11,8 @@
         state: directory
     - name: Copy Ansible directory from Vagransible repo
       ansible.builtin.copy:
-        src: "{{ VAGRANT_DIR }}/Ansible"
-        dest: "{{ VAGRANT_DIR }}/.ansible"
+        src: "{{ VAGRANT_DIR }}/Ansible/"
+        dest: "{{ VAGRANT_DIR }}/.ansible/"
     - name: Ansible config directory in /etc
       ansible.builtin.file:
         path: "{{ ANSIBLE_CONFIG_DIR }}"
