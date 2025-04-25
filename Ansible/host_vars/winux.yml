@@ -1,0 +1,7 @@
+---
+VAGRANT_DIR: "{{ lookup('ansible.builtin.env', 'HOME') }}/vagransible"
+ANSIBLE_DIR: "{{ VAGRANT_DIR }}/.ansible"
+ANSIBLE_PLAYBOOKS: "{{ ANSIBLE_DIR }}/playbooks"
+ANSIBLE_CONFIG_DIR: "/etc/ansible"
+ANSIBLE_CONFIG: "{{ ANSIBLE_CONFIG_DIR }}/ansible.cfg"
+DEFAULT_HOST_LIST: "{{ ANSIBLE_CONFIG_DIR }}/hosts"

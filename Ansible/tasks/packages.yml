@@ -1,0 +1,108 @@
+---
+- name: -- SMALLBOX --
+  when: ansible_facts['distribution'] == "Ubuntu"
+  block:
+    - name: Update current set of pre-installed packages
+      ansible.builtin.apt:
+        update_cache: yes
+    - name: Install LAMP Packages
+      ansible.builtin.apt: name={{ item }} update_cache=yes state=latest
+      loop: [ 'apache2', 'mysql-server', 'python3-pymysql', 'mysql-client', 'php', 'php-mysql', 'libapache2-mod-php' ]
+    
+    #Apache Configuration
+    - name: Create document root
+      ansible.builtin.file:
+        path: "/var/www/{{ http_host }}"
+        state: directory
+        owner: "{{ app_user }}"
+        group: "{{ app_group }}"
+        mode: '0755'
+    - name: Set up Apache virtualhost
+      ansible.builtin.template:
+        src: "../templates/apache.conf.j2"
+        dest: "/etc/apache2/sites-available/{{ http_conf }}"
+      notify: Reload Apache
+    - name: Enable new site
+      ansible.builtin.shell: /usr/sbin/a2ensite {{ http_conf }}
+      notify: Reload Apache
+    - name: Disable default Apache site
+      ansible.builtin.shell: /usr/sbin/a2dissite 000-default.conf
+      when: disable_default
+      notify: Reload Apache
+
+    # MySQL Configuration
+    - name: copy .my.cnf file with root password credentials
+      ansible.builtin.template: src="../templates/my.cnf.j2" dest="/root/.my.cnf" owner=root mode=0600
+
+    - name: Sets the root password
+      ansible.builtin.mysql_user:
+        name: "{{ mysql_user_root }}"
+        password: "{{ mysql_root_password }}"
+        login_unix_socket: /var/run/mysqld/mysqld.sock
+
+    - name: Removes all anonymous user accounts
+      ansible.builtin.mysql_user:
+        name: ''
+        host_all: true
+        state: absent
+
+    - name: Removes the MySQL test database
+      ansible.builtin.mysql_db:
+        name: test
+        state: absent
+        login_user: "{{ mysql_user_root }}"
+        login_password: "{{ mysql_root_password }}"
+
+    # UFW Configuration
+    - name: "UFW - Allow HTTP on port {{ http_port }}"
+      ansible.builtin.ufw:
+        rule: allow
+        port: "{{ http_port }}"
+        proto: tcp
+
+    # PHP Info Page
+    - name: Sets Up PHP Info Page
+      ansible.builtin.template:
+        src: "../templates/info.php.j2"
+        dest: "/var/www/{{ http_host }}/info.php"
+
+- name: -- TINYBOX --
+  when: ansible_facts['distribution'] == "Alpine"
+  block:
+    - name: Enable community repo for fetching docker package
+      ansible.builtin.lineinfile:
+        path: /etc/apk/repositories
+        line: 'http://dl-cdn.alpinelinux.org/alpine/v3.12/community'
+        state: present
+        backup: yes
+    - name: Commenting edge-related url's
+      ansible.builtin.replace:
+        path: /etc/apk/repositories
+        regexp: '^http://dl-cdn.alpinelinux.org/alpine/edge/*'
+        replace: '# http://dl-cdn.alpinelinux.org/alpine/edge/'
+    - name: Update current set of pre-installed packages
+      community.general.apk:
+        update_cache: yes
+    - name: Install docker engine
+      community.general.apk:
+        name:
+          - docker
+        state: latest
+    - name: Add user to docker group
+      ansible.builtin.user:
+        name: vagrant
+        groups: docker
+        state: present
+        append: yes
+    - name: Ensure /etc/docker exists
+      ansible.builtin.file:
+        dest: /etc/docker
+        state: directory
+        owner: root
+        group: root
+        mode: "0755"
+    - name: Ensure Docker service is started
+      ansible.builtin.service:
+        name: docker
+        enabled: true
+        state: started

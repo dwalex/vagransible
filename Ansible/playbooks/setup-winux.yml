@@ -1,0 +1,104 @@
+---
+- name: Configure localhost - Winux
+  hosts: localhost
+  gather_facts: true
+  vars_files:
+    - ../host_vars/winux.yml
+  pre_tasks:
+    - name: Ansible home directory in Winux home root
+      ansible.builtin.file:
+        path: "{{ VAGRANT_DIR }}/.ansible"
+        state: directory
+    - name: Copy Ansible directory from Vagransible repo
+      ansible.builtin.copy:
+        src: "{{ VAGRANT_DIR }}/Ansible"
+        dest: "{{ VAGRANT_DIR }}/.ansible"
+    - name: Ansible config directory in /etc
+      ansible.builtin.file:
+        path: "{{ ANSIBLE_CONFIG_DIR }}"
+        state: directory
+      become: true
+    - name: Copy Ansible config file from Vagransible repo
+      ansible.builtin.copy:
+        src: "{{ VAGRANT_DIR }}/Ansible/config/ansible.cfg"
+        dest: "{{ ANSIBLE_CONFIG }}"
+      become: true
+    - name: Copy Ansible hosts file form Vagransible repo
+      ansible.builtin.copy:
+        src: "{{ VAGRANT_DIR }}/Ansible/config/hosts"
+        dest: "{{ DEFAULT_HOST_LIST }}"
+      become: true
+
+  tasks:
+    - name: Install essential packages
+      ansible.builtin.apt:
+        state: latest
+        name:
+          - tmux
+          - bind9-dnsutils
+          - curl
+          - gawk
+          - jq
+          - iputils-ping
+          - iproute2
+          - tree
+        update_cache: yes
+      become: true
+    - name: Change root password
+      user:
+        name: root
+        state: present
+        password: "{{ 'toor!' | password_hash('sha512') }}"
+        shell: /bin/bash
+      become: true
+    - name: Add vagrant user to sudoers file
+      copy:
+        dest: /etc/sudoers.d/winux
+        content: "winux ALL=(root) NOPASSWD: ALL\n"
+      become: true
+    - name: Groupadd user winux to sudo group
+      ansible.builtin.user:
+        name: winux
+        groups: adm,sudo
+        append: yes
+        shell: /bin/bash
+      become: true
+    - name: Generate ssh keypair 'ansible_key' for the user winux
+      ansible.builtin.user:
+        name: winux
+        generate_ssh_key: yes
+        ssh_key_bits: 2048
+        ssh_key_file: .ssh/ansible_key
+    - name: Enable executable bit for all scripts
+      ansible.builtin.file:
+        path: $VAGRANT_DIR/Scripts/
+        state: directory
+        recurse: yes
+        mode: '0755'
+    - name: Sync ansible_key with the peers
+      ansible.builtin.shell: $VAGRANT_DIR/Scripts/sync_ansible_pubkey.sh
+      args:
+        executable: /bin/bash
+      register: sync_ansible_pubkey_result
+      failed_when:
+          - sync_ansible_pubkey_result.rc == 1
+          - '"FAILED" in sync_ansible_pubkey_result.stderr'
+    - name: Output from sync_ansible_pubkey.sh script
+      debug:
+        msg: '{{ sync_ansible_pubkey_result.stdout }}'
+    - name: Fetch local entries from NSS
+      ansible.builtin.shell: $VAGRANT_DIR/Scripts/host_only_ns.sh
+      args:
+        executable: /bin/bash
+      register: host_only_ns_result
+    - name: Output from host_only_ns_result.sh script
+      debug:
+        msg: '{{ host_only_ns_result.stdout }}'
+    - name: ICMP check with the vms
+      ansible.builtin.shell: $VAGRANT_DIR/Scripts/host_only_icmp.sh
+      args:
+        executable: /bin/bash
+      register: host_only_icmp_result
+    - name: Output from host_only_icmp.sh script
+      debug:
+        msg: '{{ host_only_icmp_result.stdout }}'

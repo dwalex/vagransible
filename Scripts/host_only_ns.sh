@@ -1,0 +1,1 @@
+for HOST in {$NAME,smallbox,tinybox}; do getent hosts $HOST; done

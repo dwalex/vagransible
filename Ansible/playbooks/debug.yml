@@ -1,0 +1,30 @@
+---
+- name: Debug
+  hosts: all
+  gather_facts: true
+  become: false
+
+  tasks:
+     - debug:
+         msg: "Hostname: {{ inventory_hostname }}"
+     - debug: var=ansible_env.PWD
+     - name: Identify running operative system
+       shell: cat /etc/issue
+       register: os_result
+     - debug: var=os_result.stdout
+     - debug: var=ansible_all_ipv4_addresses
+     - debug: var=ansible_uptime_seconds
+     - debug: var=ansible_loadavg
+     - debug:
+         var: "{{ item }}"
+       loop:
+         - ansible_ssh_host_key_rsa_public
+         - ansible_ssh_host_key_ecdsa_public
+     - debug: var=ansible_service_mgr
+    #  - debug: var=discovered_interpreter_python
+     - debug:
+         msg: 
+           - "{{ ansible_user_dir }}"
+           - "{{ ansible_user_id }}"
+           - "{{ ansible_user_shell }}"
+           - "{{ ansible_python_version }}"

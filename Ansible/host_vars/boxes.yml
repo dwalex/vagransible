@@ -1,0 +1,9 @@
+---
+mysql_user_root: "root" 
+mysql_root_password: "super_secret"
+app_user: "vagrant"
+app_group: "vagrant"
+http_host: "vagransible"
+http_conf: "vagransible.conf"
+http_port: "80"
+disable_default: true

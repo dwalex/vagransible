@@ -1,0 +1,5 @@
+
+# Vagransible Lab Hosts
+192.168.56.1    AUX431FL.local  AUX431FL
+192.168.56.10   smallbox.local  smallbox
+192.168.56.11   tinybox.local   tinybox

@@ -1,0 +1,1 @@
+for HOST in 192.168.56.{1,10,11} ; do ping -c3 $HOST; done

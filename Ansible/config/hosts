@@ -1,0 +1,8 @@
+[boxes]
+smallbox
+tinybox
+
+[all:vars]
+ansible_user=vagrant
+ansible_ssh_private_key_file='$HOME/.ssh/ansible_key'
+ansible_python_interpreter=/usr/bin/python3
